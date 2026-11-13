@@ -1,0 +1,61 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.50.0'
+          cache: true
+
+      - name: Verify Flutter & Dart versions
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: .
+
+      - name: Configure for Termux-style build (optional, for reference)
+        run: |
+          echo "Note: This build uses standard Flutter toolchain, not Termux-specific settings."
+          echo "For Termux builds, you'd set android.aapt2FromMavenOverride and compileSdk=34."
+          echo "This cloud build uses standard SDK 34+ and will produce a standard release APK."
+
+      - name: Build Release APK (arm64)
+        run: |
+          flutter build apk --release --target-platform android-arm64 --no-tree-shake-icons
+
+      - name: Verify APK
+        run: |
+          ls -la build/app/outputs/flutter-apk/
+          file build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daypilot-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Show artifact info
+        run: |
+          echo "APK built successfully!"
+          echo "Download from the Actions workflow run artifacts."
